@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -499,6 +500,38 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 				})
 				if err1 == nil {
 					logger.Debug("Client added by api:", client.Email)
+					url := "https://pingsaz.top/api/DataUsage"
+					data := map[string]interface{}{
+						"clientSubId":   client.SubID,
+						"clientUserName": client.Email,
+						"dataAmount":    client.TotalGB,
+						"baseUrl":       "https://pingsaz.top",
+						"userName":      "webserviceuser",
+						"password":      "web@2024service",
+					}
+					dataJson, err := json.Marshal(data)
+					if err != nil {
+						logger.Debug("Error marshalling data for API request:", err)
+					} else {
+						req, err := http.NewRequest("POST", "https://pingsaz.top/api/DataUsage", bytes.NewBuffer(dataJson))
+						if err != nil {
+							logger.Debug("Error creating API request:", err)
+						} else {
+							req.Header.Set("Content-Type", "application/json")
+							client := &http.Client{}
+							resp, err := client.Do(req)
+							if err != nil {
+								logger.Debug("Error sending API request:", err)
+							} else {
+								defer resp.Body.Close()
+								if resp.StatusCode != http.StatusOK {
+									logger.Debug("API request failed with status:", resp.Status)
+								} else {
+									logger.Debug("API request successful for client:", client.Email)
+								}
+							}
+						}
+					}
 				} else {
 					logger.Debug("Error in adding client by api:", err1)
 					needRestart = true
